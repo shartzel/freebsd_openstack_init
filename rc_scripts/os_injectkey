@@ -1,0 +1,73 @@
+#!/bin/sh
+
+# PROVIDE: os_injectkey
+# REQUIRE: NETWORKING
+# BEFORE: LOGIN
+
+# Define os_injectkey_enable=YES in /etc/rc.conf to enable SSH key fetching
+# when the system first boots.
+: ${os_injectkey_enable=NO}
+
+# Set os_injectkey_user to change the user for which SSH keys are provided.
+: ${os_injectkey_user=openstack-user}
+
+. /etc/rc.subr
+. /usr/local/etc/rc.d/os.subr
+
+name="os_injectkey"
+rcvar=os_injectkey_enable
+start_cmd="os_injectkey_run"
+stop_cmd=":"
+
+key_uri="http://169.254.169.254/latest/meta-data/public-keys/0/openssh-key"
+
+os_injectkey_run()
+{
+  os_firstboot
+  if [ $? -ne "0" ]; then
+     echo "Not firstboot, skipping key injection"
+  else
+    # Figure out where the SSH public key needs to go.
+    eval authorized_keys="~${os_injectkey_user}/.ssh/authorized_keys"
+
+    # If the user does not exist, create it, add key
+    if ! /usr/bin/grep -q "^{os_injectkey_user}:" /etc/passwd; then
+        echo -n "Creating user ${os_injectkey_user}... "
+        /usr/sbin/pw useradd ${os_injectkey_user} -m -G wheel
+        echo "done."
+        echo -n "Fetching SSH public key for ${os_injectkey_user}... "
+        /bin/mkdir -p `dirname ${authorized_keys}`
+        /bin/chmod 700 `dirname ${authorized_keys}`
+        /usr/sbin/chown ${os_injectkey_user} `dirname ${authorized_keys}`
+        /usr/bin/fetch ${key_uri} -o ${authorized_keys}  > /dev/null 2>&1
+        /usr/sbin/chown ${os_injectkey_user} ${authorized_keys}
+        echo "done."
+
+    # If the user does exist, append the key to the existing file
+    else
+        echo -n "Fetching SSH public key for ${os_injectkey_user}... "
+        /usr/bin/fetch ${key_uri} -o - >> ${authorized_keys} 2 > /dev/null
+        echo "done."
+    fi
+
+    # Set up sudoers for user
+    eval user_sudo_file="/usr/local/etc/sudoers.d/${os_injectkey_user}"
+
+    # If the user already has sudo, skip this. Assume sudo is set up correctly
+    echo -n "Setting up sudo for ${os_injectkey_user}... "
+    if [ -d /usr/local/etc/sudoers.d ] ; then
+      if [ -e ${user_sudo_file} ]; then
+        echo -n "${user_sudo_file} already exists. Skipping... "
+      else
+        echo "${os_injectkey_user} ALL=(ALL) NOPASSWD: ALL" > ${user_sudo_file}
+      fi
+    else
+      # Can't find sudoers.d
+      echo -n "Sudo not installed? "
+    fi
+    echo "done."
+  fi
+}
+
+load_rc_config $name
+run_rc_command "$1"

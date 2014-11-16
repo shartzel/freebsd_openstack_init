@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# PROVIDE: os_clear_firstboot
+# REQUIRE: NETWORKING os_hostname os_growroot os_injectkey
+
+# Define os_firstboot_enable in /etc/rc.conf to correctly set firstboot 
+# sentinel
+#
+: ${os_firstboot_enable=YES}
+
+. /etc/rc.subr
+. /usr/local/etc/rc.d/os.subr
+
+name="os_firstboot"
+rcvar=os_firstboot_enable
+start_cmd="os_firstboot_run"
+stop_cmd=":"
+
+os_firstboot_run() {
+  os_firstboot
+  if [ $? -ne "0" ]; then
+    echo "Not firstboot, skipping firstboot sentinel"
+  else
+    if [ ! -e /var/openstack ]; then
+      /bin/mkdir -p /var/openstack
+    fi
+    firstboot_file=/var/openstack/uuid
+    current_uuid=`fetch -qo - http://169.254.169.254/openstack/latest/meta_data.json | awk -F"[,:]" '{for(i=1;i<=NF;i++) {if($i~/uuid/){print $(i+1)}}}'|sed 's/^ //'`
+    # TODO: should consider making this file harder to accidentally remove
+    echo "${current_uuid}" > ${firstboot_file}
+  fi
+}
+
+load_rc_config $name
+run_rc_command "$1"

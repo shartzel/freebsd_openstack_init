@@ -1,0 +1,37 @@
+#!/bin/sh
+
+# PROVIDE: os_growroot
+# REQUIRE: NETWORKING
+# BEFORE: savecore
+
+# Define os_growroot_enable=YES in /etc/rc.conf to enable growing
+# root filesystem
+#
+#
+: ${os_growroot_enable=NO}
+
+. /etc/rc.subr
+. /usr/local/etc/rc.d/os.subr
+
+name="os_growroot"
+rcvar=os_growroot_enable
+start_cmd="os_growroot_run"
+stop_cmd=":"
+
+os_growroot_run() {
+  os_firstboot
+  if [ $? -ne "0" ]; then
+     echo "Not firstboot, skipping growroot"
+  else
+    echo "Growing root partition... "
+    original_flags=`/sbin/sysctl -n kern.geom.debugflags`
+    /sbin/gpart recover vtbd0
+    /sbin/sysctl kern.geom.debugflags=16
+    /sbin/gpart resize -i 2 -a 4k vtbd0
+    /sbin/growfs -y /dev/vtbd0p2
+    /sbin/sysctl kern.geom.debugflags=${original_flags}
+  fi
+}
+
+load_rc_config $name
+run_rc_command "$1"
