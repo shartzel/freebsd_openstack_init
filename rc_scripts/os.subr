@@ -1,0 +1,17 @@
+# Functions for openstack init
+os_firstboot() {
+  firstboot_file=/var/openstack/uuid
+  current_uuid=`fetch -qo - http://169.254.169.254/openstack/latest/meta_data.json | awk -F"[,:]" '{for(i=1;i<=NF;i++) {if($i~/uuid/){print $(i+1)}}}'|sed 's/^ //'`
+  # if file doesn't exist, it's the first boot
+  if [ ! -f ${firstboot_file} ]; then
+      return 0
+  # if file exists, but contains a uuid different then ours, firstboot
+  elif [ -f ${firstboot_file} ]; then
+    file_uuid=`cat ${firstboot_file}`
+    if [ "${current_uuid}" != "${file_uuid}" ]; then
+      return 0
+    else
+      return 1
+    fi
+  fi
+}

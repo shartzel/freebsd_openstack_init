@@ -1,0 +1,43 @@
+#!/bin/sh
+      
+# PROVIDE: os_hostname
+# REQUIRE: NETWORKING
+
+# Define os_hostname in /etc/rc.conf to enable setting of hostname
+# at first boot
+#
+: ${os_hostname_enable=YES}
+
+. /etc/rc.subr
+. /usr/local/etc/rc.d/os.subr
+
+name="os_hostname"
+rcvar=os_hostname_enable
+start_cmd="os_hostname_run"
+stop_cmd=":"
+
+os_hostname_run()
+{
+  os_firstboot
+  if [ $? -ne "0" ]; then
+     echo "Not firstboot, skipping rc.conf hostname"
+  else
+    RC_CONF="/etc/rc.conf"
+    RC_CONF_TMP=$(mktemp /tmp/rc.conf.XXXXXXXXXX)
+
+    local os_hostname
+    os_hostname=`fetch -qo - http://169.254.169.254/latest/meta-data/hostname | sed 's/\..*//g'`
+
+    echo -n "Setting hostname from metadata: ${os_hostname}... "
+    /usr/bin/sed -e '/^hostname/d' "$RC_CONF" >> "$RC_CONF_TMP"
+    echo hostname=\"${os_hostname}\" >> "$RC_CONF_TMP"
+    /bin/mv "$RC_CONF_TMP" "$RC_CONF"
+    # We end up setting hostname twice, once in /etc/rc.d/hostname
+    # and once here. Not sure it can be helped
+    /bin/hostname ${os_hostname}
+    echo "done."
+  fi
+}
+
+load_rc_config $name
+run_rc_command "$1"
