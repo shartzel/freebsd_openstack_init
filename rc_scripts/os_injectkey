@@ -28,7 +28,7 @@ os_injectkey_run()
      echo "Not firstboot, skipping key injection"
   else
     # Figure out where the SSH public key needs to go.
-    eval authorized_keys="~${os_injectkey_user}/.ssh/authorized_keys"
+    eval authorized_keys="/usr/home/${os_injectkey_user}/.ssh/authorized_keys"
 
     # If the user does not exist, create it, add key
     if ! /usr/bin/grep -q "^{os_injectkey_user}:" /etc/passwd; then
