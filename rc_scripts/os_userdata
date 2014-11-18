@@ -1,0 +1,48 @@
+#!/bin/sh
+
+# PROVIDE: os_userdata
+# REQUIRE: NETWORKING
+# BEFORE: SERVERS 
+
+# Define os_userdata_enable=YES in /etc/rc.conf to enable automatic
+# system configuration from user-data when the system first boots.
+: ${os_userdata_enable=NO}
+
+. /etc/rc.subr
+. /usr/local/etc/rc.d/os.subr
+
+name="os_userdata"
+rcvar=os_userdata_enable
+start_cmd="os_userdata_run"
+stop_cmd=":"
+
+USERDATA_URL="http://169.254.169.254/latest/user-data"
+
+os_userdata_run()
+{
+  os_firstboot
+  if [ $? -ne "0" ]; then
+     echo "Not firstboot, skipping user-data"
+  else
+    # Download to a temporary location.
+    echo -n "Reading user-data... "
+    USERDATA_TMP=$(mktemp /tmp/userdata.XXXXXXXXXX)
+    fetch -qo ${USERDATA_TMP} ${USERDATA_URL} 2>/dev/null
+
+    if [ $? = 0 ]; then
+      # Process the user-data.
+      /bin/sh $USERDATA_TMP
+      echo " done."
+    else
+      echo " failed."
+    fi
+
+    rm $USERDATA_TMP
+
+    # Thank you cperciva; re-read rc.conf
+    kill -ALRM $$
+  fi
+}
+
+load_rc_config $name
+run_rc_command "$1"

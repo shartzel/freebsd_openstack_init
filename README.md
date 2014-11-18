@@ -44,7 +44,7 @@ Most of the [image requirements](http://docs.openstack.org/image-guide/content/c
 What the RC Scripts Don't Do Yet
 --------------------------------
 
-* Process user-data.
+* Process complex user-data. A simple shell script will work fine.
 
 Notes
 -----
