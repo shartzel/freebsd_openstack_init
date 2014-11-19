@@ -57,7 +57,7 @@ install_openstack_init() {
 
   echo -n "Downloading OpenStack rc files from ${download_url}... "
 
-  for file in os.subr os_firstboot os_growroot os_hostname os_injectkey; do
+  for file in os.subr os_firstboot os_growroot os_hostname os_injectkey os_userdata; do
     file_path="${rc_path}""${file}"
     download_path="${download_url}""${file}"
 
@@ -106,7 +106,7 @@ fix_etc_rcconf() {
     echo os_injectkey_user=\"openstack\" >> "$RC_CONF_TMP"
     echo os_hostname_enable=\"YES\" >> "$RC_CONF_TMP"
     echo os_firstboot_enable=\"YES\" >> "$RC_CONF_TMP"
-    #echo os_configinit_enable=\"YES\" >> "$RC_CONF_TMP"
+    echo os_userdata_enable=\"YES\" >> "$RC_CONF_TMP"
     mv "$RC_CONF_TMP" "$RC_CONF"
     echo "done."
 }
