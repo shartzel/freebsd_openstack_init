@@ -3,6 +3,12 @@
 set -euf
 # no pipefail :(
 
+# Depending on your networking configuration, you may need to specify
+# a smaller MTU in order for fetch to read the necessary data from
+# http://169.254.169.254/openstack/latest/meta_data.json.
+# Under Neutron+GRE, the following should work
+MTU="1454"
+
 # These files will be created or edited.
 LOADER_CONF="/etc/loader.conf"
 FSTAB="/etc/fstab"
@@ -100,7 +106,7 @@ fix_etc_rcconf() {
     sed -e '/^ifconfig/d' "$RC_CONF" >> "$RC_CONF_TMP"
     # append more appropriate lines
     echo ifconfig_vtnet0_name=\"em0\" >> "$RC_CONF_TMP"
-    echo ifconfig_em0=\"DHCP\" >> "$RC_CONF_TMP"
+    echo ifconfig_em0=\"DHCP mtu $MTU\" >> "$RC_CONF_TMP"
     echo os_growroot_enable=\"YES\" >> "$RC_CONF_TMP"
     echo os_injectkey_enable=\"YES\" >> "$RC_CONF_TMP"
     echo os_injectkey_user=\"openstack\" >> "$RC_CONF_TMP"
